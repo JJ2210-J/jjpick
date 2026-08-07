@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JJ픽 · 주방 · 가전 · 리빙 추천</title>
+<meta name="description" content="살림에 진짜 도움 되는 주방·가전·리빙 아이템을 쿠팡·네이버·오늘의집에서 골라 추천합니다.">
+<meta property="og:title" content="JJ픽 · 주방 · 가전 · 리빙 추천">
+<meta property="og:description" content="살림 고수가 직접 고른 가성비 아이템 모음">
+<style>
+  :root{--brand:#C96E54;--bg:#FBF4EA;--card:#FFFCF7;--text:#3A322C;--text-sub:#8B8076;--line:#EFE6D8;--radius:18px;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{font-family:'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.5;display:flex;justify-content:center;padding:0 0 40px;}
+  .wrap{width:100%;max-width:480px;min-height:100vh;}
+  .profile{text-align:center;padding:36px 24px 18px;}
+  .avatar{width:88px;height:88px;border-radius:50%;margin:0 auto 14px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;box-shadow:0 6px 18px rgba(201,110,84,.30);}
+  .profile h1{font-family:'Nanum Myeongjo',serif;font-size:23px;font-weight:800;}
+  .profile .handle{font-size:14px;color:var(--brand);font-weight:700;margin-top:2px;}
+  .profile p{font-size:14px;color:var(--text-sub);margin-top:8px;}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:6px 20px 20px;}
+  .chip{font-size:13px;font-weight:700;color:var(--text-sub);background:var(--card);border:1px solid var(--line);padding:7px 15px;border-radius:999px;cursor:pointer;}
+  .chip.active{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .list{padding:0 18px;display:flex;flex-direction:column;gap:14px;}
+  .item{display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;text-decoration:none;color:inherit;transition:.12s;}
+  .item:active{transform:scale(.98);}
+  .num{flex-shrink:0;width:30px;height:30px;border-radius:50%;color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;}
+  .thumb{flex-shrink:0;width:62px;height:62px;border-radius:14px;background:#F3E9D9;display:flex;align-items:center;justify-content:center;font-size:25px;color:#C2A98A;overflow:hidden;}
+  .thumb img{width:100%;height:100%;object-fit:cover;}
+  .info{flex:1;min-width:0;}
+  .meta{display:flex;align-items:center;gap:6px;margin-bottom:2px;}
+  .store{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;flex-shrink:0;}
+  .cat{font-size:11px;color:var(--text-sub);font-weight:700;}
+  .name{font-size:15px;font-weight:700;margin:1px 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .desc{font-size:12.5px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .price{font-size:14px;font-weight:800;color:var(--brand);margin-top:4px;}
+  .go{flex-shrink:0;color:#CDBBA3;font-size:22px;font-weight:700;}
+  .notice{margin:24px 18px 0;padding:14px 16px;background:#F6EBDC;border:1px solid #E7D3BC;border-radius:14px;font-size:12px;color:#8A5A3C;line-height:1.6;text-align:center;}
+  .loaderr{margin:20px 18px;padding:16px;background:#F6EBDC;border:1px solid #E7D3BC;border-radius:14px;font-size:13px;color:#8A5A3C;line-height:1.7;text-align:center;}
+  footer{text-align:center;font-size:12px;color:#B0A593;padding:22px 20px 8px;}
+  footer a{color:var(--brand);text-decoration:none;font-weight:700;}
+</style>
+<!-- ===== 분석 스크립트 자리 (배포 후 여기에 한 줄 붙이면 추적 시작) =====
+     · GA4(구글):  애널리틱스에서 받은 gtag 스니펫을 여기 붙여넣기
+     · GoatCounter: <script data-goatcounter="https://내계정.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+     비워둬도 사이트는 정상 작동함. 채우면 아래 track()이 자동으로 데이터를 보냄. -->
+</head>
+<body>
+<div class="wrap">
+  <div class="profile">
+    <div class="avatar" id="av"></div>
+    <h1 id="nm"></h1>
+    <div class="handle" id="hd"></div>
+    <p id="bio"></p>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="list" id="list"></div>
+  <div class="notice" id="notice"></div>
+  <footer id="ft"></footer>
+</div>
+
+<script>
+/* 데이터는 products.json 한 곳에서만 관리합니다.
+   (admin.html 관리 콘솔로 편집 → products.json 내보내기 → 같은 폴더에 두기) */
+const STORES = {
+  "쿠팡":    { color:"#E5402A", bg:"#FBEBE7", text:"#B0341F" },
+  "네이버":   { color:"#06B65B", bg:"#E3F6EC", text:"#0A7A3D" },
+  "오늘의집": { color:"#2FB8A8", bg:"#E2F4F1", text:"#1C7569" },
+  "토스":    { color:"#3182F6", bg:"#E8F1FE", text:"#1B64DA" },
+  "알리":    { color:"#F26B1D", bg:"#FBEDE0", text:"#9A4E12" }
+};
+const FALLBACK = { color:"#C96E54", bg:"#F6EBDC", text:"#8A5A3C" };
+/* 필터 칩은 실제 상품이 있는 스토어만 자동 표시 */
+let FILTERS = ["전체"];
+let active = "전체";
+let DATA = null;
+
+/* ===== 유입경로(UTM) + 클릭 추적 골격 =====
+   분석 도구(GA4/GoatCounter)를 위 <head>에 붙이면 자동 전송. 없으면 콘솔에만 기록(정상).
+   유입경로는 링크 뒤에 ?from=instagram 처럼 붙이면 자동 인식됨. */
+const _params = new URLSearchParams(location.search);
+const SOURCE = _params.get("utm_source") || _params.get("from") || "direct";
+try { sessionStorage.setItem("jjpick_source", SOURCE); } catch(e){}
+
+function track(event, data){
+  const payload = Object.assign({ source: SOURCE }, data || {});
+  try { if (typeof gtag === "function") gtag("event", event, payload); } catch(e){}
+  try { if (window.dataLayer) window.dataLayer.push(Object.assign({ event: event }, payload)); } catch(e){}
+  try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: "event/" + event + "/" + (payload.name || ""), title: event, event: true }); } catch(e){}
+  console.log("[track]", event, payload);
+}
+
+function E(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+const chipsEl = document.getElementById("chips");
+const listEl = document.getElementById("list");
+
+function renderProfile(){
+  const pf = DATA.profile || {};
+  av.textContent = pf.avatar || "";
+  nm.textContent = pf.name || "";
+  hd.textContent = pf.handle || "";
+  bio.innerHTML = E(pf.bio).replace(/\n/g, "<br>");
+  document.getElementById("notice").innerHTML = E(DATA.disclosure).replace(/\n/g, "<br>");
+  ft.innerHTML = "© " + E(pf.name) + (pf.insta ? ' · <a href="' + E(pf.insta) + '" target="_blank" rel="noopener">' + E(pf.handle) + '</a>' : "");
+}
+
+function renderChips(){
+  chipsEl.innerHTML = "";
+  FILTERS.forEach(c=>{
+    const b = document.createElement("button");
+    b.className = "chip" + (c===active ? " active" : "");
+    b.textContent = c;
+    b.onclick = ()=>{ active = c; renderChips(); renderList(); };
+    chipsEl.appendChild(b);
+  });
+}
+
+function renderList(){
+  const items = (DATA.products||[]).filter(p => active==="전체" || p.store===active);
+  listEl.innerHTML = "";
+  items.forEach((p, i)=>{
+    const s = STORES[p.store] || FALLBACK;
+    const a = document.createElement("a");
+    a.className = "item";
+    a.href = p.link || "#";
+    a.target = "_blank";
+    a.rel = "noopener nofollow sponsored";
+    const thumb = p.img
+      ? '<span class="thumb"><img src="'+E(p.img)+'" alt=""></span>'
+      : '<span class="thumb">'+E(p.icon||"🛍️")+'</span>';
+    a.innerHTML =
+      '<span class="num" style="background:'+s.color+'">'+(i+1)+'</span>'+
+      thumb+
+      '<span class="info">'+
+        '<span class="meta">'+
+          '<span class="store" style="background:'+s.bg+';color:'+s.text+'">'+E(p.store)+'</span>'+
+          '<span class="cat">'+E(p.cat)+'</span>'+
+        '</span>'+
+        '<span class="name">'+E(p.name)+'</span>'+
+        '<span class="desc">'+E(p.desc)+'</span>'+
+        '<span class="price">'+E(p.price)+'</span>'+
+      '</span>'+
+      '<span class="go">›</span>';
+    a.addEventListener("click", function(){ track("product_click", { store: p.store, name: p.name, cat: p.cat, position: i+1 }); });
+    listEl.appendChild(a);
+  });
+}
+
+fetch("products.json", {cache:"no-store"})
+  .then(r=>{ if(!r.ok) throw new Error("not found"); return r.json(); })
+  .then(d=>{
+    DATA = d;
+    const used = [];
+    (DATA.products||[]).forEach(p=>{ if(p.store && used.indexOf(p.store)===-1) used.push(p.store); });
+    FILTERS = ["전체"].concat(used);
+    renderProfile(); renderChips(); renderList(); track("hub_open", {});
+  })
+  .catch(()=>{
+    listEl.innerHTML = '<div class="loaderr">상품 데이터를 불러오지 못했어요.<br>같은 폴더에 <b>products.json</b>이 있는지 확인하세요.<br><br>※ 파일을 더블클릭(로컬)으로 열면 브라우저 보안 때문에 안 보일 수 있어요 — <b>admin.html 미리보기</b>나 <b>호스팅(GitHub Pages)</b>에서 확인하세요.</div>';
+  });
+</script>
+</body>
+</html>

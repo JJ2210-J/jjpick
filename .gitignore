@@ -1,0 +1,4 @@
+admin.html
+deploy/
+*.zip
+.claude/
