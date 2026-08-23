@@ -1022,6 +1022,7 @@ function buildDraftCard() {
           }), async (result) => {
             await reloadSession();
             let msg = `세그먼트 ${result.segment_count}개 · ${fmtDur(result.timeline_duration)}`;
+            if (result.replaced_backup) msg += `\n기존 드래프트는 백업했습니다: ${result.replaced_backup.split(/[\\/]/).pop()}`;
             if ((result.skipped || []).length) msg += `\n건너뛴 구간 ${result.skipped.length}개`;
             if ((result.clamped || []).length) msg += `\n소재 길이 초과로 잘린 구간 ${result.clamped.length}개`;
             if (result.postprocess) {

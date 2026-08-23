@@ -30,12 +30,26 @@ def make_video(path, seconds=6):
     ], check=True, capture_output=True)
 
 
+def _redirect_backups(cls, base):
+    """테스트 백업이 실제 backups/ 폴더에 쌓이지 않게 임시 위치로 돌립니다."""
+    from app.services import capcut_draft as cd
+    cls._original_backup_dir = cd.BACKUP_DIR
+    cd.BACKUP_DIR = base / "backups"
+    cd.BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _restore_backups(cls):
+    from app.services import capcut_draft as cd
+    cd.BACKUP_DIR = cls._original_backup_dir
+
+
 @unittest.skipUnless(ffmpeg_path() and HAS_PYCAPCUT, "ffmpeg 또는 pycapcut이 없어 건너뜁니다")
 class BuildCutDraft(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
         base = Path(cls.tmp.name)
+        _redirect_backups(cls, base)
         cls.media = base / "media"
         cls.media.mkdir()
         cls.videos = [cls.media / "a.mp4", cls.media / "b.mp4"]
@@ -49,6 +63,7 @@ class BuildCutDraft(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        _restore_backups(cls)
         cls.tmp.cleanup()
 
     def _timeline(self):
@@ -108,6 +123,37 @@ class BuildCutDraft(unittest.TestCase):
         result, _ = self._build("클램프테스트", [(0.0, 999.0)])
         self.assertGreater(result["segment_count"], 0)
 
+    def test_덮어쓰기_전에_기존_드래프트를_백업한다(self):
+        """create_draft(allow_replace=True)는 폴더를 통째로 지웁니다.
+
+        자막까지 넣어 둔 드래프트를 다시 만들면 그 작업이 사라지므로,
+        지우기 전에 반드시 스냅샷을 남겨야 합니다 (요청서 2번 원칙).
+        """
+        from app.services import builder, capcut_draft as cd
+        from app.services.script_align import Subtitle
+
+        self._build("덮어쓰기테스트", [(0.0, 4.0)])
+        draft = self.root / "덮어쓰기테스트"
+        builder.inject_subtitles(
+            draft_root=self.root, draft_dir=draft,
+            subtitles=[Subtitle(id="a", start=0.5, end=2.0, text="지워지면 안 되는 자막")],
+            style_profile=cd.manual_style_profile(canvas_width=640, canvas_height=360))
+
+        before = len(cd.list_backups("덮어쓰기테스트"))
+        result, _ = self._build("덮어쓰기테스트", [(0.0, 3.0)])
+
+        self.assertIsNotNone(result["replaced_backup"], "백업 없이 덮어썼습니다")
+        self.assertGreater(len(cd.list_backups("덮어쓰기테스트")), before)
+
+        # 백업에 자막이 살아 있어야 합니다.
+        saved = cd.read_draft_content(Path(result["replaced_backup"]))
+        texts = saved.get("materials", {}).get("texts") or []
+        self.assertEqual(len(texts), 1)
+
+    def test_새_드래프트면_백업할_것이_없다(self):
+        result, _ = self._build("처음만드는드래프트", [(0.0, 3.0)])
+        self.assertIsNone(result["replaced_backup"])
+
     def test_넣을_구간이_없으면_이유를_알려준다(self):
         from app.services.capcut_draft import DraftError
         with self.assertRaises(DraftError) as ctx:
@@ -123,6 +169,7 @@ class InjectSubtitles(unittest.TestCase):
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory()
         base = Path(cls.tmp.name)
+        _redirect_backups(cls, base)
         cls.video = base / "a.mp4"
         make_video(cls.video)
         cls.root = base / "drafts"
@@ -132,6 +179,7 @@ class InjectSubtitles(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        _restore_backups(cls)
         cls.tmp.cleanup()
 
     def setUp(self):

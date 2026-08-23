@@ -41,6 +41,22 @@ def _us(seconds: float) -> int:
     return int(round(max(0.0, seconds) * SEC_US))
 
 
+def backup_if_exists(draft_root: Path, draft_name: str, tag: str) -> Optional[str]:
+    """덮어쓰기 전에 기존 드래프트를 백업합니다.
+
+    pyCapCut의 create_draft(allow_replace=True)는 기존 폴더를 **통째로 지웁니다**
+    (draft_folder.py: shutil.rmtree). 자막까지 넣어 둔 드래프트를 다시 만들면
+    그 작업이 아무 경고 없이 사라집니다.
+    요청서 2번 원칙(원본을 절대 파괴하지 말 것)에 따라 지우기 전에 스냅샷을 남깁니다.
+    """
+    existing = Path(draft_root) / draft_name
+    if not (existing / "draft_content.json").is_file():
+        return None
+    dest = cdraft.backup_draft(existing, tag=tag)
+    log.info("덮어쓰기 전 백업: %s", dest)
+    return str(dest)
+
+
 def _import_pycapcut() -> Any:
     try:
         import pycapcut
@@ -118,6 +134,9 @@ def build_cut_draft(
     canvas = timeline.canvas()
     fps = timeline.fps()
 
+    replaced_backup = backup_if_exists(draft_root, draft_name, "before_rebuild") \
+        if allow_replace else None
+
     folder = pc.DraftFolder(str(draft_root))
     script = folder.create_draft(draft_name, canvas["width"], canvas["height"], fps,
                                  allow_replace=allow_replace)
@@ -174,6 +193,7 @@ def build_cut_draft(
         "postprocess": post,
         "cut_signature": cut_map.signature(),
         "capcut_warning": warning,
+        "replaced_backup": replaced_backup,
     }
     log.info("컷 드래프트 생성: %s (세그먼트 %d개, %.1f초)",
              draft_name, placed, target_us / SEC_US)
@@ -540,6 +560,9 @@ def build_vertical_draft(
     transform_y = float(settings.get("vertical_transform_y", -0.078125))
     fps = timeline.fps()
 
+    replaced_backup = backup_if_exists(draft_root, draft_name, "before_rebuild") \
+        if allow_replace else None
+
     folder = pc.DraftFolder(str(draft_root))
     script = folder.create_draft(draft_name, width, height, fps, allow_replace=allow_replace)
 
@@ -633,4 +656,5 @@ def build_vertical_draft(
         "subtitles": sub_result,
         "clamped": cache.clamped,
         "capcut_warning": cdraft.capcut_reopened_warning(),
+        "replaced_backup": replaced_backup,
     }
