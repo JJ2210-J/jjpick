@@ -156,7 +156,8 @@ def align_script(
     except ImportError:
         log.warning("rapidfuzz가 없어 대본 정렬을 건너뜁니다. STT 텍스트를 그대로 씁니다.")
         return [{"text": s.get("text", ""), "source": "stt", "score": 0.0,
-                 "start": s.get("start", 0.0), "end": s.get("end", 0.0)}
+                 "start": s.get("start", 0.0), "end": s.get("end", 0.0),
+                 "words": s.get("words") or []}
                 for s in stt_segments]
 
     out: List[Dict[str, Any]] = []
@@ -179,12 +180,14 @@ def align_script(
                 "text": script_lines[best_idx], "source": "script",
                 "score": best_score, "stt_text": stt_text,
                 "start": float(seg.get("start", 0.0)), "end": float(seg.get("end", 0.0)),
+                "words": seg.get("words") or [],
             })
             cursor = best_idx + 1
         else:
             out.append({
                 "text": stt_text, "source": "stt", "score": best_score, "stt_text": stt_text,
                 "start": float(seg.get("start", 0.0)), "end": float(seg.get("end", 0.0)),
+                "words": seg.get("words") or [],
             })
     return out
 
@@ -253,6 +256,34 @@ def sanitize(subs: List[Subtitle], *, min_duration: float = MIN_SUBTITLE_SEC) ->
 
 
 # ══════════════════════════════════════════════════════════════════════════
+# 잘려나간 단어 제거
+# ══════════════════════════════════════════════════════════════════════════
+def surviving_text(words: Sequence[Dict[str, Any]], cut_map: CutMap) -> Tuple[str, int]:
+    """컷에서 살아남은 단어만으로 자막 텍스트를 다시 만듭니다.
+
+    컷은 **시간**을 지우지 텍스트를 지우지 않습니다. 그래서 필러워드 "그 그 그"를
+    잘라내 놓고 자막 텍스트를 그대로 두면, 화면에는 방금 잘라낸 말이 그대로 뜹니다.
+    단어 타임스탬프가 있으니 잘린 구간에 걸친 단어를 빼고 다시 잇습니다.
+
+    Returns:
+        (남은 텍스트, 제거된 단어 수)
+    """
+    kept: List[str] = []
+    removed = 0
+    for w in words:
+        start = float(w.get("start", 0.0))
+        end = float(w.get("end", start))
+        middle = (start + end) / 2.0 if end > start else start
+        if cut_map.original_to_edited(middle) is None:
+            removed += 1
+            continue
+        text = str(w.get("word", "")).strip()
+        if text:
+            kept.append(text)
+    return (" ".join(kept).strip(), removed)
+
+
+# ══════════════════════════════════════════════════════════════════════════
 # 자막 생성
 # ══════════════════════════════════════════════════════════════════════════
 def build_subtitles(
@@ -269,9 +300,25 @@ def build_subtitles(
     한 줄 규칙으로 쪼개고, 겹침을 정리합니다.
     """
     subs: List[Subtitle] = []
+    removed_words = 0
+    emptied = 0
 
     for item in aligned:
-        text = apply_glossary(str(item.get("text", "")).strip(), glossary_terms)
+        text = str(item.get("text", "")).strip()
+        words = item.get("words") or []
+
+        # 컷에서 잘려나간 단어는 자막에서도 빼야 합니다.
+        # 대본이 정본인 구간은 대본 문장을 그대로 둡니다 (대본에는 필러가 없습니다).
+        if words and item.get("source") != "script":
+            rebuilt, removed = surviving_text(words, cut_map)
+            if removed:
+                removed_words += removed
+                if not rebuilt:
+                    emptied += 1
+                    continue
+                text = rebuilt
+
+        text = apply_glossary(text, glossary_terms)
         if not text:
             continue
 
@@ -301,7 +348,11 @@ def build_subtitles(
 
     lines = [s.text for s in subs]
     analysis = line_break.analyze_lines(lines, max_chars)
-    return subs, {"sanitize": stats, "lines": analysis}
+    return subs, {
+        "sanitize": stats,
+        "lines": analysis,
+        "cut_words": {"removed": removed_words, "emptied_segments": emptied},
+    }
 
 
 # ══════════════════════════════════════════════════════════════════════════

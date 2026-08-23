@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ..config import SESSION_DIR, WORK_DIR, write_json_atomic
+from ..config import SESSION_DIR, STYLE_PROFILE_PATH, WORK_DIR, write_json_atomic
 from .logging_util import get_logger
 
 log = get_logger()
@@ -68,6 +68,19 @@ class Session:
         self.touch()
 
     def is_done(self, step: str) -> bool:
+        """단계 완료 여부.
+
+        캘리브레이션만 예외입니다. 자막 스타일 프로필은 세션이 아니라
+        `data/style_profile.json` 한 곳에 전역으로 저장되므로(요청서 6절),
+        완료 여부도 세션 플래그가 아니라 **그 파일이 있는지**에서 파생시킵니다.
+        이렇게 하지 않으면 캘리브레이션을 해도 세션에는 기록되지 않아
+        2차 자막이 영원히 잠깁니다.
+        """
+        if step == "calibration":
+            try:
+                return STYLE_PROFILE_PATH.is_file()
+            except OSError:
+                return False
         return bool(self.completed.get(step))
 
     def touch(self) -> None:

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>캡컷 자동 편집기</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<div class="topbar">
+  <h1>캡컷 자동 편집기</h1>
+  <span class="session-name" id="sessionName">세션 없음</span>
+  <span class="spacer"></span>
+  <button class="btn" id="btnNewSession">새 세션</button>
+  <button class="btn" id="btnSessionList">세션 목록</button>
+  <button class="btn" id="btnSettings">설정</button>
+  <button class="btn sm" id="btnToggleLog">로그</button>
+</div>
+
+<div id="globalNotes"></div>
+
+<div class="layout">
+  <nav class="nav" id="nav"></nav>
+  <main class="content"><div class="content-inner" id="view"></div></main>
+</div>
+
+<div class="logpanel hidden" id="logPanel">
+  <header>
+    <span>로그</span>
+    <span class="spacer" style="flex:1"></span>
+    <button class="btn sm" id="btnClearLogView">지우기</button>
+    <button class="btn sm" id="btnCloseLog">닫기</button>
+  </header>
+  <div class="lines" id="logLines"></div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

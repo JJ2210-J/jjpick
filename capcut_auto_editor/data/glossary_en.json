@@ -1,0 +1,110 @@
+{
+  "물류": [
+    {
+      "term": "Forwarding",
+      "enabled": true
+    },
+    {
+      "term": "B/L",
+      "enabled": true
+    },
+    {
+      "term": "HBL",
+      "enabled": true
+    },
+    {
+      "term": "MBL",
+      "enabled": true
+    },
+    {
+      "term": "Incoterms",
+      "enabled": true
+    },
+    {
+      "term": "FCL",
+      "enabled": true
+    },
+    {
+      "term": "LCL",
+      "enabled": true
+    },
+    {
+      "term": "CBM",
+      "enabled": true
+    },
+    {
+      "term": "ETD",
+      "enabled": true
+    },
+    {
+      "term": "ETA",
+      "enabled": true
+    },
+    {
+      "term": "Demurrage",
+      "enabled": true
+    },
+    {
+      "term": "Detention",
+      "enabled": true
+    },
+    {
+      "term": "Consignee",
+      "enabled": true
+    },
+    {
+      "term": "Shipper",
+      "enabled": true
+    },
+    {
+      "term": "Booking",
+      "enabled": true
+    },
+    {
+      "term": "Manifest",
+      "enabled": true
+    },
+    {
+      "term": "CargoWise",
+      "enabled": true
+    }
+  ],
+  "AI": [
+    {
+      "term": "Prompt",
+      "enabled": true
+    },
+    {
+      "term": "Token",
+      "enabled": true
+    },
+    {
+      "term": "Context",
+      "enabled": true
+    },
+    {
+      "term": "Agent",
+      "enabled": true
+    },
+    {
+      "term": "API",
+      "enabled": true
+    },
+    {
+      "term": "LLM",
+      "enabled": true
+    },
+    {
+      "term": "MCP",
+      "enabled": true
+    },
+    {
+      "term": "Workflow",
+      "enabled": true
+    },
+    {
+      "term": "Automation",
+      "enabled": true
+    }
+  ]
+}
