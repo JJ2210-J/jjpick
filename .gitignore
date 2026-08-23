@@ -2,3 +2,4 @@ admin.html
 deploy/
 *.zip
 .claude/
+CLAUDE.md
