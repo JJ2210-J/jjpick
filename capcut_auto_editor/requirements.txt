@@ -1,0 +1,15 @@
+# 캡컷 자동 편집기 — Python 3.11 기준
+# torch는 쓰지 않습니다 (faster-whisper가 CTranslate2 + onnxruntime로 동작, 약 2.5GB 절감)
+
+fastapi
+uvicorn[standard]
+python-multipart
+
+pycapcut==0.0.3
+faster-whisper==1.2.1
+
+rapidfuzz
+psutil
+
+# 자동 내보내기(4차, 기본 OFF)를 쓸 때만 필요합니다. Windows 전용.
+# uiautomation

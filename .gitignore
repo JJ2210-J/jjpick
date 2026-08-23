@@ -2,3 +2,18 @@ admin.html
 deploy/
 *.zip
 .claude/
+
+# 캡컷 자동 편집기 — 실행 중 생기는 것들
+capcut_auto_editor/logs/*.log
+capcut_auto_editor/backups/*
+capcut_auto_editor/data/sessions/*
+capcut_auto_editor/data/work/*
+capcut_auto_editor/data/settings.json
+capcut_auto_editor/data/style_profile.json
+capcut_auto_editor/assets/sfx/*
+capcut_auto_editor/assets/bg/*
+!capcut_auto_editor/**/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+venv/
