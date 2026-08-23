@@ -119,6 +119,13 @@ const fmtDur = (s) => {
 };
 const fmtMB = (bytes) => `${(bytes / 1048576).toFixed(1)}MB`;
 
+/** 서버 설정값을 안전하게 읽습니다. 상태를 아직 못 받았어도 기본값으로 동작합니다. */
+function setting(key, fallback) {
+  const s = S.status && S.status.settings;
+  const value = s ? s[key] : undefined;
+  return value === undefined || value === null ? fallback : value;
+}
+
 /* ── 작업 실행 + SSE ───────────────────────────────────────────────────── */
 function progressBox(step) {
   return el("div", { class: "progress", id: `progress-${step}` }, [
@@ -810,13 +817,12 @@ async function pickFont() {
    ══════════════════════════════════════════════════════════════════════ */
 VIEWS.cut = function (view) {
   const settings = (S.data.analyze_settings || {});
-  const def = (S.status && S.status.settings) || {};
   const f = S.scratch.cutForm || (S.scratch.cutForm = {
-    silence_threshold_db: settings.silence_threshold_db ?? def.silence_threshold_db ?? -35,
-    min_silence_sec: settings.min_silence_sec ?? def.min_silence_sec ?? 0.6,
-    tail_pad_sec: settings.tail_pad_sec ?? def.tail_pad_sec ?? 0.35,
-    head_pad_sec: settings.head_pad_sec ?? def.head_pad_sec ?? 0.15,
-    whisper_model: settings.whisper_model ?? def.whisper_model ?? "medium",
+    silence_threshold_db: settings.silence_threshold_db ?? setting("silence_threshold_db", -35),
+    min_silence_sec: settings.min_silence_sec ?? setting("min_silence_sec", 0.6),
+    tail_pad_sec: settings.tail_pad_sec ?? setting("tail_pad_sec", 0.35),
+    head_pad_sec: settings.head_pad_sec ?? setting("head_pad_sec", 0.15),
+    whisper_model: settings.whisper_model ?? setting("whisper_model", "medium"),
   });
 
   const card = el("div", { class: "card" }, [
@@ -845,7 +851,14 @@ VIEWS.cut = function (view) {
     "무음 감지는 소리가 임계값 아래로 떨어지는 순간을 무음 시작으로 보는데, 말끝의 자음과 여운은 이미 그 아래에 있습니다.\n" +
     "그래서 꼬리 여유를 머리 여유보다 크게 잡습니다. (기본 0.35 / 0.15)"));
 
-  const modelSelect = el("select", {}, ((S.status && S.status.whisper_models) || ["medium"]).map(
+  const models = (S.status && S.status.whisper_models) || ["medium"];
+  if (!models.includes(f.whisper_model)) {
+    // 저장된 모델이 목록에 없으면(버전이 바뀌었거나 값이 손상됨) 기본값으로 되돌립니다.
+    // 그대로 두면 드롭다운에 보이는 것과 실제로 쓰는 모델이 달라집니다.
+    f.whisper_model = setting("whisper_model", "medium");
+    if (!models.includes(f.whisper_model)) f.whisper_model = models[0];
+  }
+  const modelSelect = el("select", {}, models.map(
     (m) => el("option", { value: m, text: m, selected: m === f.whisper_model })));
   modelSelect.onchange = () => { f.whisper_model = modelSelect.value; checkModel(); };
   card.append(el("div", { class: "field" }, [
@@ -888,7 +901,7 @@ async function checkModel() {
     host.innerHTML = "";
     if (!st.downloaded) {
       host.append(note("warn", "모델을 먼저 내려받습니다", st.notice +
-        "\n받는 중에는 진행률이 표시됩니다. 도중에 멈춘 것처럼 보이는 건 정상이 아니니 진행률을 확인하세요."));
+        "\n진행률이 한동안 0에 머물 수 있습니다. 받은 파일을 임시 폴더에 모았다가 마지막에 옮기기 때문입니다."));
     } else {
       host.append(note("ok", "모델 준비됨", `${st.model} (${st.cached_mb}MB) — 바로 시작합니다.`));
     }
@@ -1076,7 +1089,7 @@ VIEWS.subtitle = function (view) {
     card.append(note("danger", "드래프트가 없습니다", "1차에서 드래프트를 먼저 만드세요."));
   }
 
-  const maxChars = el("input", { type: "number", min: 10, max: 60, value: String((S.status && S.status.settings.subtitle_max_chars) || 36) });
+  const maxChars = el("input", { type: "number", min: 10, max: 60, value: String(setting("subtitle_max_chars", 36)) });
   card.append(el("div", { class: "field mt3" }, [
     el("label", { text: "한 줄 상한 (자)" }), maxChars,
     el("div", { class: "hint", text: "참조 드래프트 실측 기준 기본 36자입니다. 상한을 넘는 구절은 어절 단위로 고르게 나눕니다." }),
@@ -1289,7 +1302,7 @@ VIEWS.transition = function (view) {
       ]),
     ]));
 
-    const dur = el("input", { type: "number", step: "0.1", min: "0.1", max: "3", value: String((S.status && S.status.settings.transition_duration_sec) || 0.5) });
+    const dur = el("input", { type: "number", step: "0.1", min: "0.1", max: "3", value: String(setting("transition_duration_sec", 0.5)) });
     holder.append(el("div", { class: "field mt3" }, [el("label", { text: "트랜지션 길이 (초)" }), dur]));
 
     holder.append(el("div", { class: "btn-row" }, [
@@ -1332,7 +1345,7 @@ VIEWS.transition = function (view) {
     const addRow = () => {
       const sel = el("select", {}, assets.sfx.map((s) => el("option", { value: s.path, text: s.name })));
       const at = el("input", { type: "number", step: "0.1", min: "0", value: "0" });
-      const vol = el("input", { type: "number", step: "0.05", min: "0", max: "2", value: String((S.status && S.status.settings.sfx_volume) || 0.6) });
+      const vol = el("input", { type: "number", step: "0.05", min: "0", max: "2", value: String(setting("sfx_volume", 0.6)) });
       const row = el("div", { class: "list-item" }, [
         el("span", { style: "flex:2" }, [sel]),
         el("span", { class: "small muted", text: "시각" }), at,
@@ -1477,8 +1490,13 @@ VIEWS.vertical = function (view) {
       note("info", "여기 시각은 편집본 기준입니다", data.note),
     ]);
 
+    // 끝 기본값은 편집본 길이를 넘지 않게 잡습니다.
+    // 25초를 그대로 두면 짧은 영상에서 존재하지 않는 구간을 가리킵니다.
+    const total = Number(data.edited_duration) || 0;
+    const defaultEnd = total > 0 ? Math.min(25, total) : 25;
     const start = el("input", { type: "number", step: "0.1", min: "0", value: "0" });
-    const end = el("input", { type: "number", step: "0.1", min: "0", value: "25" });
+    const end = el("input", { type: "number", step: "0.1", min: "0", max: String(total || ""),
+                              value: defaultEnd.toFixed(1) });
     card.append(el("div", { class: "grid2" }, [
       el("div", { class: "field" }, [el("label", { text: "시작 (초)" }), start]),
       el("div", { class: "field" }, [el("label", { text: "끝 (초)" }), end]),

@@ -130,13 +130,13 @@ def export_info(session_id: str) -> Dict[str, Any]:
         "guidance": (
             f"드래프트 '{name}' 저장이 끝났습니다.\n"
             "캡컷을 열면 프로젝트 목록에 보입니다. 거기서 확인하고 직접 내보내세요.\n"
-            "※ 이미 캡컷에 열어 둔 프로젝트라면 **완전히 종료했다가 다시 열어야** 반영됩니다."
+            "※ 이미 캡컷에 열어 둔 프로젝트라면 완전히 종료했다가 다시 열어야 반영됩니다."
         ),
         "auto_export_enabled": bool(settings.get("auto_export_enabled")),
         "auto_export_warning": (
             "자동 내보내기는 pycapcut이 캡컷 UI를 직접 조작하는 방식입니다.\n"
-            "· **이 기능만 캡컷이 실행 중이어야 합니다** (다른 모든 단계와 반대입니다)\n"
-            "· 한국어 UI에서 동작할지 **미검증**입니다\n"
+            "· 이 기능만 캡컷이 실행 중이어야 합니다 (다른 모든 단계와 반대입니다)\n"
+            "· 한국어 UI에서 동작할지 검증되지 않았습니다\n"
             "· Windows 전용이고 캡컷 버전·UI 언어에 민감합니다\n"
             "· uiautomation 패키지가 따로 필요합니다 (pip install uiautomation)\n"
             "부가 기능으로만 쓰세요. 확인란을 체크해야 실행됩니다."
@@ -170,7 +170,7 @@ def auto_export(session_id: str, payload: Dict[str, Any] = Body(...)) -> Dict[st
     # 이 기능만 캡컷이 켜져 있어야 합니다.
     if not cdraft.running_capcut_processes():
         raise fail(
-            "자동 내보내기는 캡컷이 **실행 중이어야** 합니다. "
+            "자동 내보내기는 캡컷이 실행 중이어야 합니다. "
             "(다른 모든 단계와 반대입니다) 캡컷을 실행한 뒤 다시 시도하세요."
         )
 
@@ -261,7 +261,7 @@ def vertical_timeline(session_id: str) -> Dict[str, Any]:
             "scale": settings["vertical_scale"], "transform_y": settings["vertical_transform_y"],
         },
         "note": (
-            "여기 보이는 시각은 **컷 편집 후(편집본)** 기준입니다. "
+            "여기 보이는 시각은 컷 편집 후(편집본) 기준입니다. "
             "실제로 잘라 쓸 소재는 원본이라, 그 사이 잘려나간 컷이 있으면 "
             "원본에서는 여러 조각이 됩니다. 도구가 자동으로 역변환해 쪼갭니다."
         ),

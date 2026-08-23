@@ -88,7 +88,7 @@ def manual(payload: Dict[str, Any] = Body(...)) -> Dict[str, Any]:
     )
     cdraft.save_style_profile(prof)
 
-    notes = ["이 값은 **추정값**입니다. 캡컷에서 자막을 만든 드래프트로 캘리브레이션하는 편이 정확합니다."]
+    notes = ["이 값은 추정값입니다. 캡컷에서 자막을 만든 드래프트로 캘리브레이션하는 편이 정확합니다."]
     if not prof.get("font_found"):
         notes.append(
             f"'{(prof.get('font') or {}).get('name')}' 글꼴 파일을 찾지 못했습니다. "
