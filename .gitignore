@@ -3,3 +3,4 @@ deploy/
 *.zip
 .claude/
 CLAUDE.md
+docs/
