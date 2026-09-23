@@ -4,3 +4,5 @@ deploy/
 .claude/
 CLAUDE.md
 docs/
+*.bat
+*.bak
