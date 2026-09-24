@@ -39,10 +39,7 @@
   footer{text-align:center;font-size:12px;color:#B0A593;padding:22px 20px 8px;}
   footer a{color:var(--brand);text-decoration:none;font-weight:700;}
 </style>
-<!-- ===== 분석 스크립트 자리 (배포 후 여기에 한 줄 붙이면 추적 시작) =====
-     · GA4(구글):  애널리틱스에서 받은 gtag 스니펫을 여기 붙여넣기
-     · GoatCounter: <script data-goatcounter="https://내계정.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
-     비워둬도 사이트는 정상 작동함. 채우면 아래 track()이 자동으로 데이터를 보냄. -->
+<!-- 방문 분석: 본문 스크립트의 GOATCOUNTER_CODE 한 줄로 켜고 끈다 (비우면 꺼짐). -->
 </head>
 <body>
 <div class="wrap">
@@ -77,15 +74,60 @@ let DATA = null;
 /* ===== 유입경로(UTM) + 클릭 추적 골격 =====
    분석 도구(GA4/GoatCounter)를 위 <head>에 붙이면 자동 전송. 없으면 콘솔에만 기록(정상).
    유입경로는 링크 뒤에 ?from=instagram 처럼 붙이면 자동 인식됨. */
+/* ===== 방문 분석 (GoatCounter) =====
+   GOATCOUNTER_CODE = goatcounter.com 가입 때 정한 사이트 코드 (예: "jjpick"). 비우면 분석 꺼짐.
+   쿠키·개인정보 없이 방문 수·유입 경로·클릭만 센다. 대시보드: https://<코드>.goatcounter.com */
+const GOATCOUNTER_CODE = "";
+
+/* 출처(유입 플랫폼) 판별 — 우리가 붙인 ?from= 을 가장 먼저 믿는다.
+   인스타는 프로필 링크에 utm_source=ig 를 스스로 붙이므로 별칭으로 통일. 꼬리표가 없으면 들어온 사이트로 추정. */
 const _params = new URLSearchParams(location.search);
-const SOURCE = _params.get("utm_source") || _params.get("from") || "direct";
+const SOURCE_ALIAS = { ig:"instagram", insta:"instagram", instagram:"instagram",
+                       yt:"youtube", youtube:"youtube", naver:"naver", blog:"naver", clip:"naver",
+                       kakao:"kakao", toss:"toss", etc:"etc" };
+function detectSource(){
+  const raw = (_params.get("from") || _params.get("ref") || _params.get("utm_source") || "").toLowerCase().trim();
+  if (raw) return SOURCE_ALIAS[raw] || raw.replace(/[^a-z0-9_-]/g, "").slice(0, 20) || "etc";
+  let host = "";
+  try { host = document.referrer ? new URL(document.referrer).hostname : ""; } catch(e){}
+  if (!host || host === location.hostname) return "direct";   // 새로고침·사이트 안 이동은 외부 유입 아님
+  if (/instagram\.com$/.test(host)) return "instagram";
+  if (/youtube\.com$|youtu\.be$/.test(host)) return "youtube";
+  if (/naver\.com$/.test(host)) return "naver";
+  if (/kakao/.test(host)) return "kakao";
+  return "etc";
+}
+const SOURCE = detectSource();
 try { sessionStorage.setItem("jjpick_source", SOURCE); } catch(e){}
 
+if (GOATCOUNTER_CODE) {
+  // 경로엔 플랫폼만 남긴다 — fbclid·utm_* 같은 방문자별 파라미터가 경로를 조각내지 않게.
+  window.goatcounter = {
+    path:     function(){ return location.pathname + (SOURCE !== "direct" ? "?from=" + SOURCE : ""); },
+    referrer: function(r){ return SOURCE !== "direct" ? SOURCE : r; }
+  };
+  const gs = document.createElement("script");
+  gs.async = true;
+  gs.src = "https://gc.zgo.at/count.js";
+  gs.dataset.goatcounter = "https://" + GOATCOUNTER_CODE + ".goatcounter.com/count";
+  document.head.appendChild(gs);
+}
+
+/* 이벤트 기록. 방문(페이지뷰)은 GoatCounter 가 자동으로 센다 → hub_open 은 GA용으로만 남김. */
 function track(event, data){
   const payload = Object.assign({ source: SOURCE }, data || {});
   try { if (typeof gtag === "function") gtag("event", event, payload); } catch(e){}
   try { if (window.dataLayer) window.dataLayer.push(Object.assign({ event: event }, payload)); } catch(e){}
-  try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: "event/" + event + "/" + (payload.name || ""), title: event, event: true }); } catch(e){}
+  if (event === "product_click") {
+    try {
+      if (window.goatcounter && window.goatcounter.count)
+        window.goatcounter.count({
+          event: true,
+          path:  "click/" + SOURCE + "/" + (payload.store || "") + "/" + (payload.name || ""),
+          title: (payload.store || "") + " · " + (payload.name || "") + " (" + SOURCE + ")"
+        });
+    } catch(e){}
+  }
   console.log("[track]", event, payload);
 }
 
@@ -141,7 +183,7 @@ function renderList(){
         '<span class="price">'+E(p.price)+'</span>'+
       '</span>'+
       '<span class="go">›</span>';
-    a.addEventListener("click", function(){ track("product_click", { store: p.store, name: p.name, cat: p.cat, position: i+1 }); });
+    if (p.link) a.addEventListener("click", function(){ track("product_click", { store: p.store, name: p.name, cat: p.cat, position: i+1 }); });
     listEl.appendChild(a);
   });
 }
